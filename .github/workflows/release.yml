@@ -5,6 +5,13 @@ on:
     branches:
       - main
 
+# Scoped at the workflow level so the default `GITHUB_TOKEN` cannot do anything beyond
+# publishing the chart. chart-releaser needs `contents: write` to push the gh-pages
+# index and release tags; granting the default broad scope at the workflow level would
+# hand the same power to every step in the job.
+permissions:
+  contents: write
+
 jobs:
   release:
     permissions:
