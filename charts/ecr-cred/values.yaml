@@ -3,7 +3,15 @@ fullnameOverride: ""
 
 image:
   repository: amazon/aws-cli
-  tag: latest
+  # Pin an explicit version. `latest` is a moving target, so two installs of the same
+  # chart can run different CLI builds, and a compromised or force-pushed tag would be
+  # pulled silently by every cluster using this chart.
+  tag: "2.31.29"
+
+# kubectl version downloaded by the init job and refresh cronjob. Must be a fixed
+# release (not "stable" or "latest") so the download is reproducible and the published
+# SHA256 can be verified.
+kubectlVersion: "v1.31.4"
 
 # These credentials are provided by the Formal team
 ecrAccessKeyId: ""

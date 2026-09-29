@@ -65,8 +65,31 @@ service:
     # - 172.16.0.0/12
     # - 192.168.0.0/16
 
-securityContext: {}
-podSecurityContext: {}
+# Container-level hardening. These are intentionally restrictive defaults rather than
+# empty: the connector terminates database connections (Postgres, MongoDB, SSH) and
+# holds a Formal control-plane API key, so an escape or a privileged container has a
+# direct path to both customer data and the API credential. Operators who need to relax
+# a single field should override it explicitly and knowingly.
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# Pod-level hardening. `fsGroup` lets the log-spool emptyDir stay writable for the
+# non-root user, and `seccompProfile: RuntimeDefault` blocks the ~40 legacy syscalls
+# that the default Docker profile would otherwise permit.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
 podAnnotations:
   cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
 tolerations: []

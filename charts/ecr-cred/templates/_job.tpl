@@ -25,9 +25,21 @@ template:
           - /bin/sh
           - -c
           - |
-            curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-            chmod +x kubectl
-            mv kubectl /usr/local/bin/
+            set -eu
+            # Pin the kubectl version instead of resolving "latest" at runtime. The
+            # previous `curl stable.txt` approach downloaded whatever the channel
+            # currently pointed at, with no integrity check, and installed it into
+            # /usr/local/bin -- so a compromised mirror, a DNS hijack, or a MITM on the
+            # plaintext redirect could plant an arbitrary binary that then runs with
+            # this job's ECR credentials in its environment.
+            KUBECTL_VERSION="{{ .Values.kubectlVersion }}"
+            KUBECTL_URL="https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+            curl -fsSLo /usr/local/bin/kubectl "${KUBECTL_URL}"
+            curl -fsSLo /tmp/kubectl.sha256 "${KUBECTL_URL}.sha256"
+            # The published checksum file is "<hash>  kubectl"; verify before use.
+            echo "$(cat /tmp/kubectl.sha256)  /usr/local/bin/kubectl" | sha256sum -c -
+            rm -f /tmp/kubectl.sha256
+            chmod +x /usr/local/bin/kubectl
             TOKEN=$(aws ecr get-login-password --region {{ .Values.region }})
             kubectl delete secret formal-ecr-secret || true
             kubectl create secret docker-registry formal-ecr-secret \
